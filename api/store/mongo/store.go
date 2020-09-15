@@ -938,8 +938,25 @@ func buildFilterQuery(filters []models.Filter) ([]bson.M, error) {
 	return queryMatch, nil
 }
 
-func (s *Store) ListUsers(ctx context.Context, pagination paginator.Query) ([]models.User, int, error) {
-	query := []bson.M{}
+func (s *Store) ListUsers(ctx context.Context, pagination paginator.Query, devices, sessions int) ([]models.User, int, error) {
+	query := []bson.M{
+		{
+			"$lookup": bson.M{
+				"from":         "devices",
+				"localField":   "tenant_id",
+				"foreignField": "tenant_id",
+				"as":           "devices",
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "sessions",
+				"localField":   "uid",
+				"foreignField": "$devices.uid",
+				"as":           "sessions",
+			},
+		},
+	}
 
 	// Only match for the respective tenant if requested
 	if tenant := apicontext.TenantFromContext(ctx); tenant != nil {
